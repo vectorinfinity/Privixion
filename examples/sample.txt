@@ -1,0 +1,17 @@
+SYNTHETIC DOCUMENT — FOR TESTING ONLY
+
+Contact: John Smith
+Location: New Delhi
+Email: redaction@example.com
+Phone: +91 98765 43210
+PAN: ABCPD1234E
+Aadhaar checksum example: 2345 6789 0124
+Bank account: 123456789012
+IFSC: HDFC0001234
+Passport: A1234567
+Credit card test number: 4111 1111 1111 1111
+Reference: REF-123456
+
+PUBLIC INFORMATION
+This paragraph should remain visible after redaction.
+The identifiers above are synthetic examples, not verified real identities.

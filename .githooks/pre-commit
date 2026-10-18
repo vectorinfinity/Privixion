@@ -1,0 +1,11 @@
+#!/bin/sh
+# Git invokes this from the repository root. No dependencies or network required.
+if [ -x .venv/Scripts/python.exe ]; then
+    exec .venv/Scripts/python.exe scripts/check_publication.py --staged
+elif [ -x .venv/bin/python ]; then
+    exec .venv/bin/python scripts/check_publication.py --staged
+elif command -v python3 >/dev/null 2>&1; then
+    exec python3 scripts/check_publication.py --staged
+else
+    exec python scripts/check_publication.py --staged
+fi

@@ -1,0 +1,9 @@
+[
+  {"text":"Email redaction@example.com", "entities":[{"start":6,"end":27,"category":"EMAIL"}]},
+  {"text":"PAN ABCPD1234E", "entities":[{"start":4,"end":14,"category":"IN_PAN"}]},
+  {"text":"Aadhaar 2345 6789 0124", "entities":[{"start":8,"end":22,"category":"IN_AADHAAR"}]},
+  {"text":"Invalid checksum 2345 6789 0123", "entities":[]},
+  {"text":"IFSC HDFC0001234", "entities":[{"start":5,"end":16,"category":"IN_IFSC"}]},
+  {"text":"Credit card 4111 1111 1111 1111", "entities":[{"start":12,"end":31,"category":"CREDIT_CARD"}]},
+  {"text":"Nothing sensitive in this public paragraph.", "entities":[]}
+]

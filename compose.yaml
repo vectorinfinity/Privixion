@@ -1,0 +1,105 @@
+name: privixion
+x-backend: &backend
+  build: ./backend
+  image: privixion-backend:local
+  environment: &backend-env
+    DATABASE_URL: postgresql+psycopg://privixion:${POSTGRES_PASSWORD:?Run bootstrap first}@db:5432/privixion
+    REDIS_URL: redis://redis:6379/0
+    DATA_DIR: /data
+    ARTIFACT_KEY_FILE: /run/secrets/artifact_key
+    ADMIN_HASH_FILE: /run/secrets/admin_hash
+    COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
+    MAX_FILE_MB: ${MAX_FILE_MB:-50}
+    MAX_PAGES: ${MAX_PAGES:-500}
+    MAX_BATCH: ${MAX_BATCH:-20}
+    PROCESSING_TIMEOUT: ${PROCESSING_TIMEOUT:-1800}
+  volumes:
+    - artifacts:/data
+    - runtime_secrets:/run/secrets:ro
+  networks:
+    - processing
+  tmpfs:
+    - /tmp:size=2g,mode=1777
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  restart: unless-stopped
+  depends_on:
+    secret-init: {condition: service_completed_successfully}
+    db: {condition: service_healthy}
+    redis: {condition: service_healthy}
+services:
+  secret-init:
+    build: ./backend
+    image: privixion-backend:local
+    user: "0:0"
+    command: ["python", "-c", "from pathlib import Path; import os; pairs=[('artifact_key','artifact_key'),('admin_hash','admin_hash')]; [(Path('/runtime/'+dst).write_bytes(Path('/run/secrets/'+src).read_bytes()), os.chown('/runtime/'+dst,10001,10001), os.chmod('/runtime/'+dst,0o400)) for src,dst in pairs]"]
+    secrets: [artifact_key, admin_hash]
+    volumes: ["runtime_secrets:/runtime"]
+    networks: [processing]
+    read_only: true
+    security_opt: [no-new-privileges:true]
+  web:
+    build: ./frontend
+    ports: ["127.0.0.1:8080:80"]
+    networks: [edge, processing]
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    read_only: true
+    depends_on:
+      api: {condition: service_healthy}
+    restart: unless-stopped
+  api:
+    <<: *backend
+    mem_limit: 1g
+    cpus: 2
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+  worker:
+    <<: *backend
+    command: ["celery", "-A", "app.tasks.celery", "worker", "--loglevel=WARNING", "--concurrency=1", "--max-tasks-per-child=10"]
+    mem_limit: 4g
+    cpus: 4
+    pids_limit: 256
+    depends_on:
+      secret-init: {condition: service_completed_successfully}
+      api: {condition: service_healthy}
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: privixion
+      POSTGRES_USER: privixion
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run bootstrap first}
+    volumes: ["database:/var/lib/postgresql/data"]
+    networks: [processing]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U privixion -d privixion"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    volumes: ["queue:/data"]
+    networks: [processing]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+networks:
+  edge: {}
+  processing: {internal: true}
+volumes:
+  database: {}
+  artifacts: {}
+  queue: {}
+  runtime_secrets: {}
+secrets:
+  artifact_key: {file: ./secrets/artifact.key}
+  admin_hash: {file: ./secrets/admin.hash}

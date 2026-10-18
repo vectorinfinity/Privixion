@@ -1,0 +1,10 @@
+export type Rect = [number, number, number, number];
+export type Selection = {id: string; page: number; rects: Rect[]; category: string; source: 'manual' | 'automatic' | 'search'};
+export type Finding = Omit<Selection, 'source'> & {text: string; confidence: number};
+export type Doc = {id: string; name: string; kind: string; status: string; error: string | null; created_at: string};
+export type Export = {id: string; version: number; status: string; checksum: string | null; confirmed: boolean; created_at: string};
+export type Draft = {version: number; selections: Selection[]; decisions: Record<string, 'accepted' | 'rejected'>};
+export type Detail = Doc & {pages: {index: number; width: number; height: number; words: {text: string; rect: Rect; source: string}[]}[]; findings: Finding[]; draft: Draft; exports: Export[]};
+export type Job = {id: string; state: string; progress: number; error: string | null; timings: Record<string, number>; export_id: string | null; stalled: boolean};
+export type Template = {id: string; name: string; rules: {category: string; pattern: string}[]};
+export type Event = {id: string; actor: string; action: string; timestamp: string; details: Record<string, unknown>};
